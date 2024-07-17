@@ -86,6 +86,7 @@ fn main() {
         unsafe { *sum.data.get() },
         unix_timestamp() - start);
 }
+```
 
 ## Running the Tests
 
