@@ -44,8 +44,8 @@ use std::thread;
 use std::time::{Duration, SystemTime};
 use spin_lock::SpinLock;
 
-const THREAD_COUNT: usize = 10;
-const JOB_COUNT: usize = 1000;
+const THREAD_COUNT: usize = 32;
+const JOB_COUNT: usize = 1000000;
 
 fn unix_timestamp() -> u128 {
     SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis()
