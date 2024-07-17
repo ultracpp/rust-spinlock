@@ -15,7 +15,7 @@ This repository contains a custom implementation of a spinlock in Rust, which in
 
 ## Performance
 
-In general, this custom spinlock implementation has shown to be more than 4 times faster compared to traditional mutexes, though actual performance gains can vary depending on the specific computer hardware and workload. Spinlocks are particularly useful for short, quick operations where the overhead of a mutex would be significant.
+In general, this custom spinlock implementation has shown to be more than 2~3 times faster compared to traditional mutexes, though actual performance gains can vary depending on the specific computer hardware and workload. Spinlocks are particularly useful for short, quick operations where the overhead of a mutex would be significant.
 
 ## Usage
 
@@ -125,13 +125,15 @@ fn test_spin_lock() {
             let thread = thread::spawn(move || {
                 for _ in 0..JOB_COUNT * 10 {
                     for a in 0..2 {
-                        /*lock_.lock();
-                        *lock_.data.lock().unwrap() += a;
-                        lock_.unlock();*/
+                        lock_.lock();
+                        unsafe {
+                            *lock_.data.get() += a;
+                        }
+                        lock_.unlock();
 
-                        lock_.with_lock(|data| {
+                        /*lock_.with_lock(|data| {
                             *data += a;
-                        });
+                        });*/
                     }
                 }
             });
@@ -145,7 +147,7 @@ fn test_spin_lock() {
 
         println!(
             "SpinLock: {} {}",
-            *lock_.data.lock().unwrap(),
+            unsafe { *lock_.data.get() },
             unix_timestamp() - start
         );
     }
@@ -218,7 +220,7 @@ fn test_spin_lock() {
 
 #### SpinLock
 - **Total Operations:** 320,000,000
-- **Execution Time:** 4975 ms
+- **Execution Time:** 6954 ms
 
 #### std::sync::Mutex
 - **Total Operations:** 320,000,000
