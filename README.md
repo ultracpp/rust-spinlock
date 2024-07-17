@@ -96,3 +96,140 @@ To run the tests, simply compile and execute the `main.rs` file:
 ```sh
 rustc main.rs
 ./main
+```
+
+## SpinLock vs std::sync::Mutex vs spin::Mutex Benchmark
+
+### Benchmark Setup
+The benchmark compares the performance of three synchronization mechanisms: a custom SpinLock implementation (`SpinLock`), `std::sync::Mutex`, and `spin::Mutex`. Each was tested under conditions where 32 threads performed 10,000,000 synchronization operations.
+
+### Environment
+- **CPU:** AMD Ryzen 7 6800H
+- **Memory:** 32GB
+
+### Benchmark code
+```rust
+fn test_spin_lock() {
+    println!("========test_spin_lock========");
+
+    let mut vec = Vec::with_capacity(THREAD_COUNT);
+
+    // Using SpinLock
+    {
+        let lock_ = Arc::new(SpinLock::new(0));
+        let start = unix_timestamp();
+
+        for _ in 0..THREAD_COUNT {
+            let lock_ = Arc::clone(&lock_);
+
+            let thread = thread::spawn(move || {
+                for _ in 0..JOB_COUNT * 10 {
+                    for a in 0..2 {
+                        /*lock_.lock();
+                        *lock_.data.lock().unwrap() += a;
+                        lock_.unlock();*/
+
+                        lock_.with_lock(|data| {
+                            *data += a;
+                        });
+                    }
+                }
+            });
+
+            vec.push(thread);
+        }
+
+        for thread in vec.drain(..) {
+            thread.join().unwrap();
+        }
+
+        println!(
+            "SpinLock: {} {}",
+            *lock_.data.lock().unwrap(),
+            unix_timestamp() - start
+        );
+    }
+
+    vec.clear();
+
+    // Using std::sync::Mutex
+    {
+        let lock_ = Arc::new(std::sync::Mutex::new(0));
+        let start = unix_timestamp();
+
+        for _ in 0..THREAD_COUNT {
+            let lock_ = Arc::clone(&lock_);
+
+            let thread = thread::spawn(move || {
+                for _ in 0..JOB_COUNT * 10 {
+                    for a in 0..2 {
+                        let mut lock_ = lock_.lock().unwrap();
+                        *lock_ += a;
+                    }
+                }
+            });
+
+            vec.push(thread);
+        }
+
+        for thread in vec.drain(..) {
+            thread.join().unwrap();
+        }
+
+        println!(
+            "std::Mutex: {} {}",
+            *lock_.lock().unwrap(),
+            unix_timestamp() - start
+        );
+    }
+
+    vec.clear();
+
+    // Using spin::Mutex
+    {
+        let lock_ = Arc::new(spin::Mutex::new(0));
+        let start = unix_timestamp();
+
+        for _ in 0..THREAD_COUNT {
+            let lock_ = Arc::clone(&lock_);
+
+            let thread = thread::spawn(move || {
+                for _ in 0..JOB_COUNT * 10 {
+                    for a in 0..2 {
+                        let mut lock_ = lock_.lock();
+                        *lock_ += a;
+                    }
+                }
+            });
+
+            vec.push(thread);
+        }
+
+        for thread in vec.drain(..) {
+            thread.join().unwrap();
+        }
+
+        println!("spin::Mutex: {} {}", *lock_.lock(), unix_timestamp() - start);
+    }
+}
+```
+
+### Benchmark Results
+
+#### SpinLock
+- **Total Operations:** 320,000,000
+- **Execution Time:** 4975 ms
+
+#### std::sync::Mutex
+- **Total Operations:** 320,000,000
+- **Execution Time:** 18090 ms
+
+#### spin::Mutex
+- **Total Operations:** 320,000,000
+- **Execution Time:** 297750 ms
+
+### Conclusion
+From the benchmark results, the `SpinLock` implementation outperformed both `std::sync::Mutex` and `spin::Mutex` significantly in terms of execution time. This performance advantage can be attributed to the spin-waiting technique used in `SpinLock`, which avoids context switching and thus reduces overhead on systems with multiple cores, such as the AMD Ryzen 7 6800H.
+
+These results demonstrate the trade-offs between different synchronization primitives and highlight the performance characteristics of spin locks under heavy contention scenarios.
+
