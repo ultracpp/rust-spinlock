@@ -110,7 +110,7 @@ impl<T> SpinLock<T> {
     }
 
     #[allow(dead_code)]
-    pub fn with_lock_timeout<R>(&self, f: impl FnOnce(&mut T) -> R) -> Result<R, &'static str> {
+    pub fn with_lock_max_attempts<R>(&self, f: impl FnOnce(&mut T) -> R) -> Result<R, &'static str> {
         self.lock_with_max_attempts()?;
         let result = unsafe { f(&mut *self.data.get()) };
         self.unlock();
