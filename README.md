@@ -52,24 +52,25 @@ fn unix_timestamp() -> u128 {
 }
 
 fn main() {
-    let sum = Arc::new(SpinLock::new(0));
+    let lock_ = Arc::new(SpinLock::new(0));
     let start = unix_timestamp();
     let mut vec = Vec::new();
 
     for _ in 0..THREAD_COUNT {
-        let sum = Arc::clone(&sum);
+        let lock_ = Arc::clone(&lock_);
 
         let thread = thread::spawn(move || {
             for _ in 0..JOB_COUNT * 10 {
                 for a in 0..2 {
-                    if let Err(e) = sum.lock_with_timeout() {
+                    /*if let Err(e) = lock_.lock_with_max_attempts() {
                         println!("Error: {}", e);
                         return;
-                    }
+                    }*/
+                    lock_.lock();
                     unsafe {
-                        *sum.data.get() += a;
+                        *lock_.data.get() += a;
                     }
-                    sum.unlock();
+                    lock_.unlock();
                 }
             }
         });
@@ -83,7 +84,7 @@ fn main() {
 
     println!(
         "SpinLock: {} {}",
-        unsafe { *sum.data.get() },
+        unsafe { *lock_.data.get() },
         unix_timestamp() - start);
 }
 ```
