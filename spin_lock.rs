@@ -1,5 +1,5 @@
 /*
- * cskiplist - custom implementation of a spinlock in Rust
+ * SpinLock - custom implementation of a spinlock in Rust
  * Copyright (c) 2024 Eungsuk Jeon
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
